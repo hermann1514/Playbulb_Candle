@@ -29,7 +29,7 @@ class PlaybulbBattery(CoordinatorEntity[PlaybulbCoordinator], SensorEntity):
     def __init__(self, coordinator: PlaybulbCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.unique_id}_battery"
-        self._attr_device_info = self._device_info_from_light(coordinator, entry)
+        self._attr_device_info = _device_info_from_light(coordinator, entry)
 
     @property
     def native_value(self) -> int | None:

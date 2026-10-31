@@ -24,6 +24,7 @@ class PlaybulbLight(CoordinatorEntity[PlaybulbCoordinator], LightEntity):
     _attr_has_entity_name = True
     _attr_name = None
     _attr_supported_color_modes = {ColorMode.RGBW}
+    _attr_color_mode = ColorMode.RGBW
     _attr_effect_list = list(EFFECTS)
 
     def __init__(self, coordinator: PlaybulbCoordinator, entry: ConfigEntry) -> None:
