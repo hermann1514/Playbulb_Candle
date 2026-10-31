@@ -77,8 +77,21 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         async with self._lock:
             client = await self._ensure_connected()
             try:
+                characteristic = client.services.get_characteristic(CHAR_COLOR)
+                if characteristic is None:
+                    raise ValueError(f"Farb-Characteristic {CHAR_COLOR} nicht gefunden")
+                properties = characteristic.properties
+                if "write-without-response" in properties:
+                    response = False
+                elif "write" in properties:
+                    response = True
+                else:
+                    raise ValueError(
+                        f"Farb-Characteristic {CHAR_COLOR} unterstützt kein Schreiben "
+                        f"(Properties: {properties})"
+                    )
                 r, g, b, w = (max(0, min(255, int(value))) for value in rgbw)
-                await client.write_gatt_char(CHAR_COLOR, bytes((w, r, g, b)), response=True)
+                await client.write_gatt_char(CHAR_COLOR, bytes((w, r, g, b)), response=response)
             except Exception:
                 await self._disconnect_locked()
                 raise
