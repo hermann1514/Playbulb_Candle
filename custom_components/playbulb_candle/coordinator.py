@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CHAR_BATTERY, CHAR_COLOR, CHAR_EFFECT, DOMAIN
+from .const import CHAR_BATTERY, CHAR_COLOR, CHAR_EFFECT, DEFAULT_EFFECT_SPEED, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,9 +56,12 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 color = bytes(await client.read_gatt_char(CHAR_COLOR))
                 if len(color) != 4:
                     raise ValueError(f"Ungültige Farbdaten ({len(color)} Bytes)")
+                effect_color = None
                 try:
                     effect_data = bytes(await client.read_gatt_char(CHAR_EFFECT))
                     effect = effect_data[4] if len(effect_data) >= 5 else 0xFF
+                    if len(effect_data) >= 4:
+                        effect_color = (effect_data[1], effect_data[2], effect_data[3], effect_data[0])
                 except Exception:
                     effect = 0xFF
                 battery = None
@@ -68,42 +71,57 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         battery = battery_data[0]
                 except Exception:
                     pass
-                return {"color": (color[1], color[2], color[3], color[0]), "effect": effect, "battery": battery}
+                return {
+                    "color": (color[1], color[2], color[3], color[0]),
+                    "effect": effect,
+                    "effect_color": effect_color,
+                    "battery": battery,
+                }
             except Exception as err:
                 await self._disconnect_locked()
                 raise UpdateFailed(f"Lesen der PLAYBULB fehlgeschlagen: {err}") from err
+
+    @staticmethod
+    async def _write_char(client: BleakClient, uuid: str, payload: bytes) -> None:
+        """Write a characteristic, preferring write-without-response."""
+        characteristic = client.services.get_characteristic(uuid)
+        if characteristic is None:
+            raise ValueError(f"Characteristic {uuid} nicht gefunden")
+        properties = characteristic.properties
+        if "write-without-response" in properties:
+            response = False
+        elif "write" in properties:
+            response = True
+        else:
+            raise ValueError(
+                f"Characteristic {uuid} unterstützt kein Schreiben (Properties: {properties})"
+            )
+        await client.write_gatt_char(uuid, payload, response=response)
 
     async def async_write_color(self, rgbw: tuple[int, int, int, int]) -> None:
         async with self._lock:
             client = await self._ensure_connected()
             try:
-                characteristic = client.services.get_characteristic(CHAR_COLOR)
-                if characteristic is None:
-                    raise ValueError(f"Farb-Characteristic {CHAR_COLOR} nicht gefunden")
-                properties = characteristic.properties
-                if "write-without-response" in properties:
-                    response = False
-                elif "write" in properties:
-                    response = True
-                else:
-                    raise ValueError(
-                        f"Farb-Characteristic {CHAR_COLOR} unterstützt kein Schreiben "
-                        f"(Properties: {properties})"
-                    )
                 r, g, b, w = (max(0, min(255, int(value))) for value in rgbw)
-                await client.write_gatt_char(CHAR_COLOR, bytes((w, r, g, b)), response=response)
+                await self._write_char(client, CHAR_COLOR, bytes((w, r, g, b)))
             except Exception:
                 await self._disconnect_locked()
                 raise
 
-    async def async_write_effect(self, mode: int, speed: int = 50) -> None:
+    async def async_write_effect(
+        self,
+        mode: int,
+        color: tuple[int, int, int, int] | None = None,
+        speed: int = DEFAULT_EFFECT_SPEED,
+    ) -> None:
         async with self._lock:
             client = await self._ensure_connected()
-            current = (self.data or {}).get("color", (255, 255, 255, 0))
-            r, g, b, w = current
+            if color is None:
+                color = (self.data or {}).get("color", (255, 255, 255, 0))
+            r, g, b, w = (max(0, min(255, int(value))) for value in color)
             try:
-                payload = bytes((w, r, g, b, mode & 0xFF, 0, max(0, min(255, speed)), 0))
-                await client.write_gatt_char(CHAR_EFFECT, payload, response=True)
+                payload = bytes((w, r, g, b, mode & 0xFF, 0, max(0, min(255, int(speed))), 0))
+                await self._write_char(client, CHAR_EFFECT, payload)
             except Exception:
                 await self._disconnect_locked()
                 raise

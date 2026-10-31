@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.light import LightEntity, ColorMode
+from homeassistant.components.light import ColorMode, LightEntity, LightEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, EFFECTS, MANUFACTURER
+from .const import DOMAIN, EFFECT_NONE, EFFECTS, MANUFACTURER
 from .coordinator import PlaybulbCoordinator
 
 
@@ -25,6 +25,7 @@ class PlaybulbLight(CoordinatorEntity[PlaybulbCoordinator], LightEntity):
     _attr_name = None
     _attr_supported_color_modes = {ColorMode.RGBW}
     _attr_color_mode = ColorMode.RGBW
+    _attr_supported_features = LightEntityFeature.EFFECT
     _attr_effect_list = list(EFFECTS)
 
     def __init__(self, coordinator: PlaybulbCoordinator, entry: ConfigEntry) -> None:
@@ -40,13 +41,23 @@ class PlaybulbLight(CoordinatorEntity[PlaybulbCoordinator], LightEntity):
         self._attr_is_on = False
 
     @property
+    def _effect_mode(self) -> int:
+        return (self.coordinator.data or {}).get("effect", EFFECT_NONE)
+
+    @property
     def is_on(self) -> bool:
         color = (self.coordinator.data or {}).get("color", (0, 0, 0, 0))
-        return any(color)
+        return any(color) or self._effect_mode != EFFECT_NONE
 
     @property
     def rgbw_color(self) -> tuple[int, int, int, int]:
-        return (self.coordinator.data or {}).get("color", (255, 255, 255, 0))
+        data = self.coordinator.data or {}
+        color = data.get("color", (255, 255, 255, 0))
+        if not any(color) and self._effect_mode != EFFECT_NONE:
+            effect_color = data.get("effect_color")
+            if effect_color and any(effect_color):
+                return effect_color
+        return color
 
     @property
     def brightness(self) -> int:
@@ -54,7 +65,7 @@ class PlaybulbLight(CoordinatorEntity[PlaybulbCoordinator], LightEntity):
 
     @property
     def effect(self) -> str | None:
-        mode = (self.coordinator.data or {}).get("effect", 0xFF)
+        mode = self._effect_mode
         return next((name for name, value in EFFECTS.items() if value == mode), "Kein Effekt")
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -66,14 +77,26 @@ class PlaybulbLight(CoordinatorEntity[PlaybulbCoordinator], LightEntity):
             current = max(color) or 255
             factor = brightness / current
             color = tuple(round(component * factor) for component in color)
-        await self.coordinator.async_write_color(tuple(color))
+
+        current_mode = self._effect_mode
         effect_name = kwargs.get("effect")
         if effect_name in EFFECTS:
-            await self.coordinator.async_write_effect(EFFECTS[effect_name])
-        elif "effect" in kwargs:
-            await self.coordinator.async_write_effect(0xFF)
+            mode = EFFECTS[effect_name]
+        else:
+            # No effect requested: keep a running effect (e.g. when only the
+            # brightness or color changes) instead of silently stopping it.
+            mode = current_mode
+
+        if mode != EFFECT_NONE:
+            await self.coordinator.async_write_effect(mode, color)
+        else:
+            if current_mode != EFFECT_NONE:
+                await self.coordinator.async_write_effect(EFFECT_NONE, color)
+            await self.coordinator.async_write_color(color)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
+        if self._effect_mode != EFFECT_NONE:
+            await self.coordinator.async_write_effect(EFFECT_NONE, (0, 0, 0, 0))
         await self.coordinator.async_write_color((0, 0, 0, 0))
         await self.coordinator.async_request_refresh()
