@@ -1,0 +1,27 @@
+{
+  "domain": "playbulb_candle",
+  "name": "PLAYBULB Candle",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [
+    "bluetooth_adapters"
+  ],
+  "iot_class": "local_polling",
+  "requirements": [
+    "bleak-retry-connector>=3.5.0"
+  ],
+  "version": "1.0.0",
+  "integration_type": "device",
+  "bluetooth": [
+    {
+      "local_name": "PLAYBULB*"
+    },
+    {
+      "local_name": "Playbulb*"
+    },
+    {
+      "service_uuid": "0000ff0d-0000-1000-8000-00805f9b34fb",
+      "connectable": true
+    }
+  ]
+}

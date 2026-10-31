@@ -1,0 +1,34 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add PLAYBULB Candle",
+        "description": "Select a device discovered over Bluetooth.",
+        "data": {
+          "address": "Device"
+        }
+      },
+      "bluetooth_confirm": {
+        "title": "Add PLAYBULB Candle",
+        "description": "Set up {name}?"
+      }
+    },
+    "abort": {
+      "no_devices_found": {
+        "title": "No devices found",
+        "description": "No unconfigured PLAYBULB device was found."
+      },
+      "already_configured": {
+        "title": "Already configured",
+        "description": "This device is already configured."
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery": {
+        "name": "Battery"
+      }
+    }
+  }
+}

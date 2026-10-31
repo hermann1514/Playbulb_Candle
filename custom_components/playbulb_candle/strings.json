@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "PLAYBULB Candle hinzufügen",
+        "description": "Wähle ein in Bluetooth entdecktes Gerät.",
+        "data": {
+          "address": "Gerät"
+        }
+      },
+      "bluetooth_confirm": {
+        "title": "PLAYBULB Candle hinzufügen",
+        "description": "Soll {name} eingerichtet werden?"
+      }
+    },
+    "abort": {
+      "no_devices_found": "Kein nicht konfiguriertes PLAYBULB-Gerät gefunden.",
+      "already_configured": "Dieses Gerät ist bereits eingerichtet."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery": {
+        "name": "Batterie"
+      }
+    }
+  }
+}
