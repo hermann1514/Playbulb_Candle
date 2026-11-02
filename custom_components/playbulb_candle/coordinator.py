@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import timedelta
 from typing import Any
 
 from bleak import BleakClient
@@ -10,9 +11,21 @@ from bleak_retry_connector import BleakClientWithServiceCache, establish_connect
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CHAR_BATTERY, CHAR_COLOR, CHAR_EFFECT, DEFAULT_EFFECT_SPEED, DOMAIN
+from .const import (
+    CHAR_BATTERY,
+    CHAR_COLOR,
+    CHAR_EFFECT,
+    CHAR_FIRMWARE,
+    CHAR_HARDWARE,
+    CHAR_MODEL,
+    CHAR_SERIAL,
+    DEFAULT_EFFECT_SPEED,
+    DOMAIN,
+    MANUFACTURER,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,12 +34,20 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Maintain one BLE connection and read bulb state every minute."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        super().__init__(hass, _LOGGER, name=f"{DOMAIN}_{entry.entry_id}", update_interval=__import__("datetime").timedelta(seconds=60))
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"{DOMAIN}_{entry.entry_id}",
+            update_interval=timedelta(seconds=60),
+        )
         self.hass = hass
         self.address = entry.data["address"]
         self.name = entry.data.get("name", "PLAYBULB Candle")
         self.client: BleakClient | None = None
         self._lock = asyncio.Lock()
+        self.effect_speed: int = DEFAULT_EFFECT_SPEED
+        self.device_meta: dict[str, Any] = {}
+        self._meta_read = False
 
     async def _ensure_connected(self) -> BleakClient:
         if self.client is not None and self.client.is_connected:
@@ -49,9 +70,28 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.client = None
         self.async_set_updated_data(self.data or {})
 
+    async def _read_device_meta(self, client: BleakClient) -> None:
+        """Read the standard Device Information characteristics once per connection cycle."""
+        for key, uuid in (
+            ("model", CHAR_MODEL),
+            ("serial_number", CHAR_SERIAL),
+            ("sw_version", CHAR_FIRMWARE),
+            ("hw_version", CHAR_HARDWARE),
+        ):
+            try:
+                raw = bytes(await client.read_gatt_char(uuid))
+            except Exception:
+                continue
+            value = raw.decode("utf-8", "replace").strip("\x00 ")
+            if value:
+                self.device_meta[key] = value
+        self._meta_read = True
+
     async def _async_update_data(self) -> dict[str, Any]:
         async with self._lock:
             client = await self._ensure_connected()
+            if not self._meta_read:
+                await self._read_device_meta(client)
             try:
                 color = bytes(await client.read_gatt_char(CHAR_COLOR))
                 if len(color) != 4:
@@ -112,10 +152,12 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self,
         mode: int,
         color: tuple[int, int, int, int] | None = None,
-        speed: int = DEFAULT_EFFECT_SPEED,
+        speed: int | None = None,
     ) -> None:
         async with self._lock:
             client = await self._ensure_connected()
+            if speed is None:
+                speed = self.effect_speed
             if color is None:
                 color = (self.data or {}).get("color", (255, 255, 255, 0))
             r, g, b, w = (max(0, min(255, int(value))) for value in color)
@@ -125,6 +167,19 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except Exception:
                 await self._disconnect_locked()
                 raise
+
+    def device_info(self) -> DeviceInfo:
+        """Build the device registry entry, enriched with BLE device metadata."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.address)},
+            connections={(CONNECTION_BLUETOOTH, self.address)},
+            name=self.name,
+            manufacturer=MANUFACTURER,
+            model=self.device_meta.get("model") or "PLAYBULB Candle",
+            sw_version=self.device_meta.get("sw_version"),
+            hw_version=self.device_meta.get("hw_version"),
+            serial_number=self.device_meta.get("serial_number"),
+        )
 
     async def async_disconnect(self) -> None:
         async with self._lock:

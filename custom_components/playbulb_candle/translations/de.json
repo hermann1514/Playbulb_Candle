@@ -10,7 +10,7 @@
       },
       "bluetooth_confirm": {
         "title": "PLAYBULB Candle hinzufügen",
-        "description": "Soll {name} eingerichtet werden?"
+        "description": "Soll {name} ({address}) eingerichtet werden?"
       }
     },
     "abort": {
@@ -28,6 +28,11 @@
     "sensor": {
       "battery": {
         "name": "Batterie"
+      }
+    },
+    "number": {
+      "effect_speed": {
+        "name": "Effektgeschwindigkeit"
       }
     }
   }

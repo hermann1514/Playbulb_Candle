@@ -11,6 +11,8 @@ if [[ ! -d "$SOURCE" ]]; then
   exit 1
 fi
 mkdir -p "$CONFIG_DIR/custom_components"
+# Vollständig ersetzen, damit keine veralteten Dateien früherer Versionen bleiben
+rm -rf "$DEST"
 mkdir -p "$DEST"
 cp -R "$SOURCE"/. "$DEST"/
 echo "PLAYBULB Candle installiert nach $DEST"

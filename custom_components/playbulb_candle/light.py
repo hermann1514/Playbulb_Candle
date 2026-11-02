@@ -6,11 +6,11 @@ from typing import Any
 from homeassistant.components.light import ColorMode, LightEntity, LightEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, EFFECT_NONE, EFFECTS, MANUFACTURER
+from .const import DOMAIN, EFFECT_NONE, EFFECTS
 from .coordinator import PlaybulbCoordinator
 
 
@@ -31,14 +31,11 @@ class PlaybulbLight(CoordinatorEntity[PlaybulbCoordinator], LightEntity):
     def __init__(self, coordinator: PlaybulbCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = entry.unique_id
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.unique_id)},
-            connections={(CONNECTION_BLUETOOTH, coordinator.address)},
-            name=coordinator.name,
-            manufacturer=MANUFACTURER,
-            model="PLAYBULB Candle",
-        )
         self._attr_is_on = False
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self.coordinator.device_info()
 
     @property
     def _effect_mode(self) -> int:
@@ -88,7 +85,7 @@ class PlaybulbLight(CoordinatorEntity[PlaybulbCoordinator], LightEntity):
             mode = current_mode
 
         if mode != EFFECT_NONE:
-            await self.coordinator.async_write_effect(mode, color)
+            await self.coordinator.async_write_effect(mode, color, self.coordinator.effect_speed)
         else:
             if current_mode != EFFECT_NONE:
                 await self.coordinator.async_write_effect(EFFECT_NONE, color)

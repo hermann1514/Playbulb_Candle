@@ -33,5 +33,11 @@ Das Skript kopiert `custom_components/playbulb_candle` nach `/config/custom_comp
 ## Hinweise
 
 - Bluetooth muss für Home Assistant eingerichtet sein; kompatible Bluetooth-Proxies werden über den HA-Bluetooth-Stack unterstützt.
-- Die Batterie-Entität erscheint nur, wenn die Batterie-Characteristic lesbar ist.
+- Bei der Auswahl bzw. Bestätigung des Geräts wird die MAC-Adresse angezeigt; die Batterie-Entität zeigt „unbekannt“, wenn die Batterie-Characteristic nicht lesbar ist.
+- In der Geräteübersicht werden Hersteller (MIPOW), Modell sowie – falls vom Gerät lesbar – Firmware-Version, Hardware-Version und Seriennummer angezeigt.
+- Der Regler **Effektgeschwindigkeit** (1–100) steuert das Tempo von Effekten; auf einen laufenden Effekt wirkt er sofort.
 - Die Integration pollt im 60-Sekunden-Intervall.
+
+## Lizenz
+
+Diese Integration steht unter der MIT-Lizenz (siehe [LICENSE](LICENSE)).
