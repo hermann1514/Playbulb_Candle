@@ -8,6 +8,9 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN
 from .coordinator import PlaybulbCoordinator
 
+# Preload platforms in the import executor so HA never imports them inside the event loop
+from . import light, number, sensor  # noqa: F401,E402
+
 PLATFORMS: list[Platform] = [Platform.LIGHT, Platform.NUMBER, Platform.SENSOR]
 
 
