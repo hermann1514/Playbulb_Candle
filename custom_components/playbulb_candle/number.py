@@ -1,7 +1,7 @@
 """Effect speed number entity for PLAYBULB Candle."""
 from __future__ import annotations
 
-from homeassistant.components.number import NumberDisplayMode, RestoreNumber
+from homeassistant.components.number import NumberMode, RestoreNumber
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -25,7 +25,7 @@ class PlaybulbEffectSpeed(CoordinatorEntity[PlaybulbCoordinator], RestoreNumber)
     _attr_native_min_value = EFFECT_SPEED_MIN
     _attr_native_max_value = EFFECT_SPEED_MAX
     _attr_native_step = 1
-    _attr_mode = NumberDisplayMode.SLIDER
+    _attr_mode = NumberMode.SLIDER
 
     def __init__(self, coordinator: PlaybulbCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
