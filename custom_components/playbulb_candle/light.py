@@ -69,7 +69,7 @@ class PlaybulbLight(CoordinatorEntity[PlaybulbCoordinator], LightEntity):
         color = tuple(kwargs.get("rgbw_color", self.rgbw_color))
         brightness = kwargs.get("brightness")
         if not any(color):
-            color = (255, 255, 255, 0)
+            color = self.coordinator.last_color
         if brightness is not None:
             current = max(color) or 255
             factor = brightness / current

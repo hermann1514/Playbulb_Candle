@@ -14,14 +14,8 @@
       }
     },
     "abort": {
-      "no_devices_found": {
-        "title": "Keine Geräte gefunden",
-        "description": "Kein nicht konfiguriertes PLAYBULB-Gerät gefunden."
-      },
-      "already_configured": {
-        "title": "Bereits eingerichtet",
-        "description": "Dieses Gerät ist bereits eingerichtet."
-      }
+      "no_devices_found": "Kein nicht konfiguriertes PLAYBULB-Gerät gefunden.",
+      "already_configured": "Dieses Gerät ist bereits eingerichtet."
     }
   },
   "entity": {

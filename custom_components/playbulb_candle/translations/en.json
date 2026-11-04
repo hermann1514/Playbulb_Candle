@@ -14,14 +14,8 @@
       }
     },
     "abort": {
-      "no_devices_found": {
-        "title": "No devices found",
-        "description": "No unconfigured PLAYBULB device was found."
-      },
-      "already_configured": {
-        "title": "Already configured",
-        "description": "This device is already configured."
-      }
+      "no_devices_found": "No unconfigured PLAYBULB device was found.",
+      "already_configured": "This device is already configured."
     }
   },
   "entity": {

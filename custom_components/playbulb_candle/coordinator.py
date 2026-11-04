@@ -24,6 +24,9 @@ from .const import (
     CHAR_SERIAL,
     DEFAULT_EFFECT_SPEED,
     DOMAIN,
+    EFFECT_NONE,
+    EFFECT_SPEED_MAX,
+    EFFECT_SPEED_MIN,
     MANUFACTURER,
 )
 
@@ -46,6 +49,8 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.client: BleakClient | None = None
         self._lock = asyncio.Lock()
         self.effect_speed: int = DEFAULT_EFFECT_SPEED
+        # Last non-black color, restored when the light is turned on without a color
+        self.last_color: tuple[int, int, int, int] = (255, 255, 255, 0)
         self.device_meta: dict[str, Any] = {}
         self._meta_read = False
 
@@ -102,6 +107,10 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     effect = effect_data[4] if len(effect_data) >= 5 else 0xFF
                     if len(effect_data) >= 4:
                         effect_color = (effect_data[1], effect_data[2], effect_data[3], effect_data[0])
+                    if effect != EFFECT_NONE and len(effect_data) >= 7 and effect_data[6]:
+                        self.effect_speed = max(
+                            EFFECT_SPEED_MIN, min(EFFECT_SPEED_MAX, effect_data[6])
+                        )
                 except Exception:
                     effect = 0xFF
                 battery = None
@@ -111,8 +120,13 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         battery = battery_data[0]
                 except Exception:
                     pass
+                rgbw = (color[1], color[2], color[3], color[0])
+                if any(rgbw):
+                    self.last_color = rgbw
+                elif effect_color and any(effect_color):
+                    self.last_color = effect_color
                 return {
-                    "color": (color[1], color[2], color[3], color[0]),
+                    "color": rgbw,
                     "effect": effect,
                     "effect_color": effect_color,
                     "battery": battery,
@@ -144,6 +158,8 @@ class PlaybulbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 r, g, b, w = (max(0, min(255, int(value))) for value in rgbw)
                 await self._write_char(client, CHAR_COLOR, bytes((w, r, g, b)))
+                if any((r, g, b, w)):
+                    self.last_color = (r, g, b, w)
             except Exception:
                 await self._disconnect_locked()
                 raise

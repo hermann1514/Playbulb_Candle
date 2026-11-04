@@ -1,7 +1,7 @@
 """Effect speed number entity for PLAYBULB Candle."""
 from __future__ import annotations
 
-from homeassistant.components.number import NumberDisplayMode, NumberEntity
+from homeassistant.components.number import NumberDisplayMode, RestoreNumber
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -17,7 +17,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     async_add_entities([PlaybulbEffectSpeed(coordinator, entry)])
 
 
-class PlaybulbEffectSpeed(CoordinatorEntity[PlaybulbCoordinator], NumberEntity):
+class PlaybulbEffectSpeed(CoordinatorEntity[PlaybulbCoordinator], RestoreNumber):
     """Slider controlling the speed of running light effects."""
 
     _attr_has_entity_name = True
@@ -31,6 +31,16 @@ class PlaybulbEffectSpeed(CoordinatorEntity[PlaybulbCoordinator], NumberEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.unique_id}_effect_speed"
 
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        # Restore the last speed unless a running effect already reported its own
+        mode = (self.coordinator.data or {}).get("effect", EFFECT_NONE)
+        last = await self.async_get_last_number_data()
+        if mode == EFFECT_NONE and last is not None and last.native_value is not None:
+            self.coordinator.effect_speed = max(
+                EFFECT_SPEED_MIN, min(EFFECT_SPEED_MAX, int(last.native_value))
+            )
+
     @property
     def device_info(self) -> DeviceInfo:
         return self.coordinator.device_info()
@@ -42,6 +52,7 @@ class PlaybulbEffectSpeed(CoordinatorEntity[PlaybulbCoordinator], NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         speed = int(value)
         self.coordinator.effect_speed = speed
+        self.async_write_ha_state()
         mode = (self.coordinator.data or {}).get("effect", EFFECT_NONE)
         if mode != EFFECT_NONE:
             # A running effect is restarted with the new speed so the change
