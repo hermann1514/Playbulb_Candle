@@ -3,7 +3,7 @@
 ## Unveröffentlicht
 
 ### Hinzugefügt
-- Integrations-Icon (`brand/icon.png`, 256×256, transparenter Hintergrund) aus dem Produktbild erstellt.
+- Integrations-Icon (`brand/icon.png` 256×256, `brand/icon@2x.png` 512×512) aus einem Produktfoto der Kerze erstellt.
 
 ### Behoben
 - Abbruchmeldungen im Einrichtungsdialog (`no_devices_found`, `already_configured`) werden wieder korrekt übersetzt angezeigt.
