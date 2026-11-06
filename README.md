@@ -38,6 +38,7 @@ Das Skript kopiert `custom_components/playbulb_candle` nach `/config/custom_comp
 - Der Regler **Effektgeschwindigkeit** (1–100) steuert das Tempo von Effekten; auf einen laufenden Effekt wirkt er sofort. Der Wert wird bei laufendem Effekt vom Gerät gelesen und bleibt über Neustarts erhalten.
 - Beim Einschalten ohne Farbangabe wird die zuletzt verwendete Farbe wiederhergestellt.
 - Die Integration pollt im 60-Sekunden-Intervall.
+- Das Integrations-Icon liegt unter `custom_components/playbulb_candle/brand/icon.png` und wird ab Home Assistant 2026.3 automatisch angezeigt.
 
 ## Lizenz
 

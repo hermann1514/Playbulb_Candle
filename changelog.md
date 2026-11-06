@@ -2,6 +2,9 @@
 
 ## Unveröffentlicht
 
+### Hinzugefügt
+- Integrations-Icon (`brand/icon.png`, 256×256, transparenter Hintergrund) aus dem Produktbild erstellt.
+
 ### Behoben
 - Abbruchmeldungen im Einrichtungsdialog (`no_devices_found`, `already_configured`) werden wieder korrekt übersetzt angezeigt.
 - Regler „Effektgeschwindigkeit“ aktualisiert seinen Zustand sofort statt erst beim nächsten Poll.
